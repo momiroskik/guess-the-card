@@ -47,74 +47,67 @@ const INITIAL: TrickState = {
   finishedAt: null,
 };
 
-export function trickReducer(state: TrickState, action: TrickAction): TrickState {
-  switch (action.type) {
-    case 'begin':
-      return {
-        ...INITIAL,
-        phase: 'shuffling',
-        deck: drawDeck(action.seed),
-        seed: action.seed,
-        startedAt: action.now,
-      };
+type ActionOf<K extends TrickAction['type']> = Extract<TrickAction, { type: K }>;
 
-    case 'shuffled':
-      return state.phase === 'shuffling' ? { ...state, phase: 'memorise' } : state;
+type TrickHandlers = {
+  readonly [K in TrickAction['type']]: (state: TrickState, action: ActionOf<K>) => TrickState;
+};
 
-    case 'memorised':
-      return state.phase === 'memorise' ? { ...state, phase: 'target' } : state;
+const HANDLERS: TrickHandlers = {
+  begin: (_state, action) => ({
+    ...INITIAL,
+    phase: 'shuffling',
+    deck: drawDeck(action.seed),
+    seed: action.seed,
+    startedAt: action.now,
+  }),
 
-    case 'chooseTarget': {
-      if (state.phase !== 'target') return state;
-      if (!Number.isInteger(action.target) || action.target < 1 || action.target > MAX_TARGET) {
-        return state;
-      }
-      return { ...state, phase: 'round', target: action.target, round: 0, picks: [] };
-    }
+  shuffled: (state) => (state.phase === 'shuffling' ? { ...state, phase: 'memorise' } : state),
 
-    case 'pickPile': {
-      if (state.phase !== 'round') return state;
-      const deck = restack(state.deck, action.pile, state.target, state.round);
-      const round = state.round + 1;
-      return {
-        ...state,
-        deck,
-        round,
-        picks: [...state.picks, action.pile],
-        phase: round >= ROUNDS ? 'divining' : 'round',
-      };
-    }
+  memorised: (state) => (state.phase === 'memorise' ? { ...state, phase: 'target' } : state),
 
-    case 'divined':
-      return state.phase === 'divining'
-        ? { ...state, phase: 'reveal', finishedAt: action.now }
-        : state;
-
-    case 'reset':
-      return INITIAL;
-
-    default:
+  chooseTarget: (state, action) => {
+    if (state.phase !== 'target') return state;
+    if (!Number.isInteger(action.target) || action.target < 1 || action.target > MAX_TARGET) {
       return state;
-  }
-}
+    }
+    return { ...state, phase: 'round', target: action.target, round: 0, picks: [] };
+  },
 
-function stepIndexOf(state: TrickState): number {
-  switch (state.phase) {
-    case 'intro':
-      return 0;
-    case 'shuffling':
-    case 'memorise':
-      return 1;
-    case 'target':
-      return 2;
-    case 'round':
-      return 3;
-    default:
-      return 4;
-  }
-}
+  pickPile: (state, action) => {
+    if (state.phase !== 'round') return state;
+    const round = state.round + 1;
+    return {
+      ...state,
+      deck: restack(state.deck, action.pile, state.target, state.round),
+      round,
+      picks: [...state.picks, action.pile],
+      phase: round >= ROUNDS ? 'divining' : 'round',
+    };
+  },
 
-export function useTrick() {
+  divined: (state, action) =>
+    state.phase === 'divining' ? { ...state, phase: 'reveal', finishedAt: action.now } : state,
+
+  reset: () => INITIAL,
+};
+
+export const trickReducer = (state: TrickState, action: TrickAction): TrickState =>
+  HANDLERS[action.type]?.(state, action as never) ?? state;
+
+const STEP_INDEX: Record<Phase, number> = {
+  intro: 0,
+  shuffling: 1,
+  memorise: 1,
+  target: 2,
+  round: 3,
+  divining: 4,
+  reveal: 4,
+};
+
+const stepIndexOf = (state: TrickState): number => STEP_INDEX[state.phase];
+
+export const useTrick = () => {
   const [state, dispatch] = useReducer(trickReducer, INITIAL);
 
   const piles = useMemo(() => toPiles(state.deck), [state.deck]);
@@ -150,6 +143,6 @@ export function useTrick() {
     stepIndex: stepIndexOf(state),
     ...actions,
   };
-}
+};
 
 export type TrickController = ReturnType<typeof useTrick>;

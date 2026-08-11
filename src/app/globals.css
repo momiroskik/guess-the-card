@@ -323,7 +323,12 @@
     overflow-y: auto;
     overscroll-behavior: contain;
     display: grid;
+    /* Centred content that outgrows this box would overflow past the top edge,
+       where scrollTop cannot reach it. `safe` drops back to start-alignment the
+       moment that would happen, so tall stages stay scrollable from their first
+       line. The unprefixed value is the fallback for browsers without `safe`. */
     align-content: center;
+    align-content: safe center;
     justify-items: center;
     scrollbar-width: none;
   }
@@ -574,6 +579,20 @@
   }
   .intro > *:nth-child(3) {
     animation-delay: 440ms;
+  }
+
+  /* On short viewports the fanned hand is what tips the intro over one screen.
+     Shrinking it keeps the whole first screen static instead of nearly-static. */
+  @media (max-height: 46rem) {
+    .hand {
+      width: 13rem;
+      height: 7rem;
+    }
+
+    .hand > * {
+      --card-h: 82px;
+      width: 3.6rem;
+    }
   }
 
   .riffle {

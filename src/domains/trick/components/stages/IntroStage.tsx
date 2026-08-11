@@ -14,7 +14,7 @@ const FACTS = [
 
 export function IntroStage({ onBegin }: { onBegin: () => void }) {
   return (
-    <div className="flex flex-col items-center gap-8 text-center">
+    <div className="flex flex-col items-center gap-5 text-center sm:gap-8">
       <div className="hand" aria-hidden="true">
         {FAN.map((index) => (
           <span key={index}>
@@ -23,7 +23,7 @@ export function IntroStage({ onBegin }: { onBegin: () => void }) {
         ))}
       </div>
 
-      <div className="intro flex flex-col items-center gap-8">
+      <div className="intro flex flex-col items-center gap-5 sm:gap-8">
         <div className="space-y-4">
           <h1 className="text-[2.6rem] leading-[0.98] font-bold tracking-[-0.03em] text-balance sm:text-6xl">
             Think of a card.
